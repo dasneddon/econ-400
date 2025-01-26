@@ -1,0 +1,418 @@
+---
+title: "Homework 1"
+author: "David Sneddon"
+institute: "Old Dominion University"
+format: 
+  html:
+    theme: lux # Check here for more themes: https://quarto.org/docs/output-formats/html-themes.html
+    code-tools: true
+    code-fold: true
+    code-summary: "Code"
+    code-copy: hover
+    link-external-newwindow: true
+    tbl-cap-location: top
+    fig-cap-location: bottom
+
+self-contained: true
+editor: source
+---
+
+```{r setup, include=FALSE}
+# DO NOT EDIT THIS
+
+knitr::opts_chunk$set(fig.align = 'center')
+knitr::opts_chunk$set(out.width = '90%')
+knitr::opts_chunk$set(results = 'hold')
+knitr::opts_chunk$set(fig.show = 'hold')
+knitr::opts_chunk$set(error = TRUE)
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+par(mar = c(4.1, 4.1, 1.1, 4.1))
+
+hooks = knitr::knit_hooks$get()
+hook_foldable = function(type) {
+  force(type)
+  function(x, options) {
+    res = hooks[[type]](x, options)
+    
+    if (isFALSE(options[[paste0("fold.", type)]])) return(res)
+    
+    paste0(
+      "<details open><summary>", gsub("^p", "P", gsub("^o", "O", type)), "</summary>\n\n",
+      res,
+      "\n\n</details>"
+    )
+  }
+}
+
+knitr::knit_hooks$set(
+  output = hook_foldable("output"),
+  plot = hook_foldable("plot")
+)
+
+Q <- 0
+```
+
+Understanding labor market outcomes is crucial for gaining insights into economic dynamics and societal structures. The 1976 Panel Study of Income Dynamics (PSID) serves as a valuable dataset for such an analysis, capturing a comprehensive snapshot of American households at a particular time. These data document labor market outcomes for women with additional information about their partners' labor market outcomes. Investigating the factors influencing female wages provides a nuanced perspective on gender dynamics, labor market trends, and the distribution of economic opportunities within households.
+
+Analyzing wages between spouses allows us to explore questions related to gender equity, workforce participation, and the impact of educational attainment. Educational levels, for instance, may influence both the individual's and the spouse's earning potential, shedding light on the interplay between education and labor market outcomes within a family unit. Additionally, considering the presence of children in the household introduces a complex dynamic, as it may affect labor force participation, career choices, and subsequently, wages.
+
+Regression analysis emerges as a powerful tool for examining these relationships, enabling the quantification of the impact of various factors on wages. By controlling for relevant characteristics, such as education and the labor market status of partners, regression models can provide a clearer understanding of the specific influences shaping labor market outcomes for women. This exploration not only contributes to our comprehension of societal structures but also provides empirical insights essential for crafting informed policies aimed at fostering equality and economic well-being.
+
+In this homework, you will explore [PSID data](https://vincentarelbundock.github.io/Rdatasets/csv/AER/PSID1976.csv) ([documentation](https://vincentarelbundock.github.io/Rdatasets/doc/AER/PSID1976.html)) and generate empirical insights about the labor market for women in 1976.
+
+
+
+## Question `r Q <- Q+1; Q`
+
+```{r include=FALSE}
+q <- 0
+```
+
+Use the data linked above to answer the following.
+
+
+`r q <- q+1; letters[q]`. Read the data into an object called `psid`. (**1 Point**)
+
+```{r}
+psid <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/AER/PSID1976.csv")
+psid_full <- psid
+```
+
+
+`r q <- q+1; letters[q]`. Subset the `data.frame` to include only the following columns: (**1 Point**)
+
+:::: {.columns}
+
+::: {.column width="49%"}
+- `wage`: wife's hourly wage in 1975 dollars.
+- `hours`: wife's hours worked in 1975.
+- `education`: wife's education measured in number of years.
+- `age`: wife's age.
+- `youngkids`: number of children under six years old.
+- `oldkids`: number of children between six and eighteen.
+:::
+
+::: {.column width="2%"}
+<!-- empty column to create gap -->
+:::
+
+::: {.column width="49%"}
+- `hwage`: husband's hourly wage in 1975 dollars.
+- `hhours`: husband's hours worked in 1975.
+- `heducation`: husband's education measured in number of years.
+- `hage`: husband's age.
+- `unemp`: unemployment rate in county of residence, in percentage points.
+- `city`: whether the couple lives in a large city.
+:::
+
+::::
+
+```{r}
+library(dplyr)
+psid <- psid %>% select(wage, hours, education, age, youngkids, oldkids, hwage,
+                        hhours, heducation, hage, unemp, city)
+```
+
+
+`r q <- q+1; letters[q]`. Convert `city` into a binary variable equal to one if the couple lived in a large city and zero otherwise. (**1 Point**)
+
+```{r}
+psid$city <- ifelse(psid$city=="yes", 1, 0)
+```
+
+
+`r q <- q+1; letters[q]`. Create an `employed` variable equal to 1 if the woman worked in 1975. (**1 Point**)
+
+```{r}
+psid$employed <- ifelse(psid$hours==0,0,1)
+```
+
+
+`r q <- q+1; letters[q]`. Using functions from the `modelsummary` package, create a summary statistics table.  Then, using this table, discuss some empirical facts.^[For example, what is the average age gap within couples? What is the average wage gap? What percent of sampled females were employed in 1975? What is the average number of children of the women sampled?] (**3 Points**)
+
+```{r}
+library("modelsummary") 
+options(modelsummary_factory_default = 'kableExtra')
+options("modelsummary_format_numeric_latex" = "plain")
+datasummary(All(psid) ~ length + mean + sd + min + max,
+            data = psid, fmt = fmt_decimal(2))
+```
+
+Average age gap: $$\bar{X}_{AgeGap} = |\bar{X}_{age}-\bar{X}_{hage}|$$$$2.58=|42.54-45.12|$$
+Average wage gap: $$\bar{X}_{WageGap} = |\bar{X}_{wage}-\bar{X}_{hwage}|$$$$5.11=|2.37-7.48|$$
+Percentage of Employed Females: $57\%$ \
+
+Average number of children in sample: $$\bar{X}_{kids}=\bar{X}_{oldkids}+\bar{X}_{youngkids}$$$$1.59=1.35+0.24$$
+
+
+
+## Question `r Q <- Q+1; Q`
+
+```{r include=FALSE}
+q <- 0
+```
+
+In this question, you will explore some of the variables in the data.
+
+
+`r q <- q+1; letters[q]`. Tabulate the *total* number of children for the women sampled. In other words, create a visualization that shows how many women had 0 children, 1 child, 2 children, etc. (**3 Points**)
+
+```{r}
+library(ggplot2)
+totchildren <- ggplot(psid, aes(x= (youngkids+oldkids)))
+totchildren + 
+  geom_histogram(binwidth = 1, color = "black", fill = "tomato3") +
+  geom_text(stat = "bin", aes(label = ..count..), binwidth = 1, vjust = -0.5) +
+  scale_x_continuous(breaks = seq(0, max(psid$youngkids + psid$oldkids), na.rm = TRUE)) +
+  labs(title = "Distribution of Women by Number of Children", x = "Children", y = "Women") +
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+`r q <- q+1; letters[q]`. Calculate the average number of children by age. Plot the relationship as a line graph. (**3 Points**)
+
+```{r}
+age_frame <- aggregate((youngkids+oldkids) ~ age,
+                       data = psid, 
+                       FUN = mean,
+                                               na.rm = TRUE)
+colnames(age_frame) <- c("age", "xKids")
+age_kid <- ggplot(age_frame, aes(x = age, y = xKids))
+age_kid + 
+  geom_line(color = "springgreen4") +
+  labs(title = "Average Number of Children by Woman's Age", x = "Woman's Age", y = "Average Number of Children") +
+  scale_x_continuous(breaks = seq(min(age_frame$age),
+                                  max(age_frame$age),
+                                  by = 2,
+                                  na.rm = TRUE)) +
+  scale_y_continuous(breaks = seq(min(age_frame$xKids),
+                                  max(age_frame$xKids),
+                                  by = 0.25,
+                                  na.rm = TRUE)) +
+  theme_linedraw() + 
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+`r q <- q+1; letters[q]`. Generate a scatterplot between a woman's wages and her husband's wages. Be sure to include axis labels, etc. Add a diagonal line that denotes y = x. What are some things you notice in this plot? (**3 Points**)
+
+```{r}
+wh_wages <- ggplot(psid, aes(x = wage, y = hwage))
+wh_wages + 
+  geom_point(shape = 20, color = "tomato3") +
+  geom_abline(slope = 1, color = "royalblue4") +
+  labs(title = "Wife vs. Husband Wages", 
+       x = "Wife's Wage", 
+       y = "Husband's Wage") +
+  scale_x_continuous(limits = c(0,45),
+                     breaks = seq(0,
+                                  45,
+                                  by = 5,
+                                  na.rm = TRUE)) +
+  scale_y_continuous(limits = c(0,45), 
+                     breaks = seq(0,
+                                  45,
+                                  by = 5,
+                                  na.rm = TRUE)) +
+  coord_equal() +
+  theme_linedraw() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+It appears that husbands generally made more than their wives indicated by the greater density of points above $y=x$. It is also difficult to see a correlation. 
+
+Testing with a Pearson Correlation yields:
+
+```{r}
+cor.test(psid$wage, psid$hwage)
+```
+With $p > 0.09284$, the weak positive correlation, $r = 0.6129$, is not statistically significant at $\alpha=0.05$.
+
+
+
+
+## Question `r Q <- Q+1; Q`
+
+```{r include=FALSE}
+q <- 0
+```
+
+For this question, you will estimate two regressions.  First, you will estimate a model to explain a woman's wages using characteristics pertaining to her and/or her husband. Second, estimate the same model using only the subset of women with non-zero wages. At the end, use functions from the `modelsummary` package to present the results.
+
+
+`r q <- q+1; letters[q]`. In the next question, you will be tasked with estimating a model to explain wages for women using information about the women and their husbands. You may use any variable, or combination of variables, included in the data except for the variable that indicates whether a woman is employed. For each variable you choose to include in the model, provide a short rationale for why you believe it belongs, and the effect you anticipate it having on wages. (**2 Points**)
+
+$$
+arcsinh(Y_{Wage}) = \beta_0 + \beta_n X + \varepsilon : \{\text{age, youngkids\_, oldkids\_, city, college, hcollege}\} \in X
+$$
+Alternative hypotheses among all women with $\alpha=0.05$: \
+*age*: $\beta < 0$ : Older women are more likely to be married and therefore less likely to work.\
+*youngkids_*: $\beta < 0$ : Women with young kids are more likely to be at home. I expect this effect will be less once I subset only women who were employed.\
+*oldkids_*: $\beta < 0$ : Women with older kids are more likely to need to supplement income, and have less need for childcare, so the effect will be less than with young kids, but still negative. However I expect this to be positive once I subset employed women. \
+*city*: $\beta > 0$ : Women living in cities are more likely to have higher wages due to higher wages offered in cities to account for higher cost of living.\
+*college*: $\beta > 0$ : Women who attended college are more likely to have career aspirations and greater earning potential. \
+*hcollege*: $\beta < 0$ : Women who's husbands attended college are less likely to need to supplement income for their families.
+
+I rejected using husbands wage and the marginal tax rate, because I already know the correlation between husband's wage and wife's wage was not statistically significant.
+
+`r q <- q+1; letters[q]`. Estimate the model you discussed above. (**1 Point**)
+
+```{r}
+#Convert young and old kids to binary variables
+psid_full$youngkids_ <- as.factor(ifelse(psid_full$youngkids==0, "no" , "yes"))
+psid_full$oldkids_ <- as.factor(ifelse(psid_full$oldkids==0,"no" ,"yes"))
+reg1 <- lm(asinh(wage) ~ age + youngkids_ + oldkids_ + city + college + hcollege, psid_full)
+summary(reg1)
+```
+
+I end up failing to reject the null hypothesis for city and hcollege.
+
+`r q <- q+1; letters[q]`. Re-estimate the model using only the subset of employed women. (**1 Point**)
+
+```{r}
+psid_full$employed <- ifelse(psid_full$hours==0,0,1)
+reg2 <- lm(asinh(wage) ~ age + youngkids_ + oldkids_ + city + college + hcollege, psid_full[psid_full$employed==1,])
+summary(reg2)
+```
+I was surprised by this result, I fail to reject the null hypothesis for all regressors other than the binary variable for whether the woman went to college. 
+
+`r q <- q+1; letters[q]`. Display the coefficients from both estimations in a single table (using functions from `modelsummary`). (**3 Points**)
+
+```{r}
+regz <- list(`All Women`=reg1,
+             `Employed Women`=reg2)
+coefz <- c("age" = "Age",
+           "youngkids_yes" = "Young Children",
+           "oldkids_yes" = "Older Children",
+           "collegeyes" = "Woman went to College",
+           "cityyes" = "City Dweller",
+           "hcollegeyes" = "Husband went to College",
+           "(Intercept)" = "Constant")
+gofz <- c("nobs", "r.squared")
+modelsummary(regz,
+             title = "Effects on Women's Wages in 1975",
+             estimate = "{estimate}{stars}",
+             coef_map = coefz,
+             gof_map = gofz)
+```
+
+
+`r q <- q+1; letters[q]`. Interpret the coefficients in the regressions. (**2 Points**)
+
+When accounting for all women in the sample, including those with no earnings in 1975:\
+
+Age: Each additional year older results in a $2.7\%$ decrease in wages, with a very high level of confidence.\
+
+Young Children: Women who have young children (of any number) will earn $75.8\%$ less, on average, with a very high level of confidence.\
+
+Older Children: Women who have older children (of any number) will earn $17.0\%$ less, on average, with a low level of confidence, just barely rejecting the null hypothesis with $p=0.0495$\
+
+Woman Went to College: Women who went to college will earn $56.5\%$ more, with a very high level of confidence.\
+
+City Dweller: Predicts $2.2\%$ higher wages for city dwellers, but fail to reject the null hypothesis.\
+
+Husband Went to College: Predicts $5.7\%$ lower wages if a woman's husband went to college, but fail to reject the null hypothesis.\
+
+Constant: Not meaningful.
+
+When accounting for all women in the sample:\
+
+Age: Predicts additional year older results in a $0.1\%$ increase in wages, but fail to reject the null hypothesis.\
+
+Young Children: Predicts women who have young children (of any number) will earn $4.4\%$ less, but fail to reject the null hypothesis.\
+
+Older Children: Predicts women who have older children (of any number) will earn $7.7\%$ less, but fail to reject the null hypothesis.\
+
+Woman Went to College: Women who went to college will earn $37.0\%$ more, with a very high level of confidence.\
+
+City Dweller: Predicts $7.2\%$ higher wages for city dwellers, but fail to reject the null hypothesis.\
+Husband Went to College: Predicts $3.3\%$ lower wages if a woman's husband went to college, but fail to reject the null hypothesis.\
+
+Constant: Not meaningful.
+
+
+
+`r q <- q+1; letters[q]`. How does the interpretation of these regressions differ from one another? Which regression do you prefer, and why? (**3 Points**)
+
+The regressors chosen, particularly age, young children, and older children appear to have predictive value for whether a woman is employed, but not for their wages. Both regressions highlight the rather intuitive omitted variable bias, enforced in this case by the prohibition of using `psid$employed`. Neither model is particularly helpful in predicting wages with the exception of whether or not the woman went to college, so I suppose I prefer neither for that purpose, but both for reinforcing my picks for regressors for predicting a binary variable for employment.
+
+
+## Question `r Q <- Q+1; Q`
+
+```{r include=FALSE}
+q <- 0
+```
+
+The exercise in this question will be very similar to the last one, except the dependent variable will be binary.
+
+
+`r q <- q+1; letters[q]`. Estimate a model that explains female employment status. Again, you may choose which variables you would like to use in the model, but this time you may not use the woman's wages as an explanatory variable. For each variable you choose to include in the model, provide a short rationale for why you believe it belongs, and the effect you anticipate it having on employment. (**3 Points**)
+
+$$
+Y_{Employed} = \beta_0 + \beta_n X + \varepsilon : \{\text{age, youngkids\_, oldkids\_, college}\} \in X
+$$
+Alternative hypotheses with $\alpha=0.05$:\
+
+*age*: $\beta < 0$ : Older women are more likely to be married and therefore less likely to work.\
+
+*youngkids_*: $\beta < 0$ : Women with young kids are more likely to be at home. \
+
+*oldkids_*: $\beta < 0$ : Women with older kids are more likely to need to supplement income, and have less need for childcare, so the effect will be less than with young kids, but still negative. \
+
+*college*: $\beta > 0$ : Women who attended college are more likely to have career aspirations. \
+
+From the results of the prior two regressions, I expect the evidence to be strong for rejecting the null hypotheses.
+
+```{r}
+reg3 <- lm(employed ~ age + youngkids_ + oldkids_ + college, psid_full)
+summary(reg3)
+```
+
+
+
+`r q <- q+1; letters[q]`. Display the coefficients in a table. (**3 Point**)
+
+```{r}
+coefz2 <- c("age" = "Age",
+           "youngkids_yes" = "Young Children",
+           "oldkids_yes" = "Older Children",
+           "collegeyes" = "Woman went to College",
+           "(Intercept)" = "Constant")
+gofz2 <- c("nobs", "r.squared")
+reg3z <- list(`All Women`=reg3)
+modelsummary(reg3z,
+             title = "Effects on Women's Employment in 1975",
+             estimate = "{estimate}{stars}",
+             coef_map = coefz2,
+             gof_map = gofz2)
+```
+
+
+`r q <- q+1; letters[q]`. Interpret each coefficient in the regression. (**2 Points**)
+
+Age: A year older results in a $1.5\%$ decrease in likelihood of employment, with a very high level of confidence with $\alpha=0.001$\
+
+Young Children: Women who have young children (of any number) results in a $39.2\%$ decrease in likelihood of employment, with a very high level of confidence with $\alpha=0.001$\
+
+Older Children:  Women who have older children (of any number) results in a $6.9\%$ decrease in likelihood of employment, with a weak level of confidence with $p=0.0853$, failing to reject the null hypothesis when $\alpha=0.05$.\
+
+Woman Went to College: Women who went to college are $15.8\%$ more likely to be employed, with a very high level of confidence, with $\alpha=0.001$.\
+
+
+
+
+
+## Question `r Q <- Q+1; Q`
+
+```{r include=FALSE}
+q <- 0
+```
+
+Discuss yours findings from the regressions above.  What does this tell you about women from the mid 1970s?  Did anything surprise you?  How do you think these regressions would differ if the sample contained data collected from women of today? (**4 Points**)
+
+The effect of having young children on a woman's earning potential in the 1970's is unsurprising, I was however surprised how little the other variables played a part. Even in the first regression, the effects of the other explanatory variables that passed significance tests were false positives due to omitted variable bias.  Women in the '70s were typically at home with young children, which is intuitive. 
+
+If the sample were of the women of 2025, I would expect the results to be similar, however I would also expect the effects to be less pronounced for employment. I'd be interested to see if a college education has a greater or less pronounced impact on wages. College degrees are far more common, especially for women in 2025. On one hand, a college degree is less of a differentiator, on the other hand it could pose a significant barrier to those without one.  
+
