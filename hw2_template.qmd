@@ -1,0 +1,286 @@
+---
+title: "Homework 2"
+author: "David Sneddon"
+institute: "Old Dominion University"
+format: 
+  html:
+    theme: lux # Check here for more themes: https://quarto.org/docs/output-formats/html-themes.html
+    code-tools: true
+    code-fold: true
+    code-summary: "Code"
+    code-copy: hover
+    link-external-newwindow: true
+    tbl-cap-location: top
+    fig-cap-location: bottom
+
+self-contained: true
+editor: source
+---
+
+```{r setup, include=FALSE}
+# DO NOT EDIT THIS
+
+knitr::opts_chunk$set(fig.align = 'center')
+knitr::opts_chunk$set(out.width = '90%')
+knitr::opts_chunk$set(results = 'hold')
+knitr::opts_chunk$set(fig.show = 'hold')
+knitr::opts_chunk$set(error = TRUE)
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+par(mar = c(4.1, 4.1, 1.1, 4.1))
+
+hooks = knitr::knit_hooks$get()
+hook_foldable = function(type) {
+  force(type)
+  function(x, options) {
+    res = hooks[[type]](x, options)
+    
+    if (isFALSE(options[[paste0("fold.", type)]])) return(res)
+    
+    paste0(
+      "<details open><summary>", gsub("^p", "P", gsub("^o", "O", type)), "</summary>\n\n",
+      res,
+      "\n\n</details>"
+    )
+  }
+}
+
+knitr::knit_hooks$set(
+  output = hook_foldable("output"),
+  plot = hook_foldable("plot")
+)
+
+Q <- 0
+```
+
+Besides New Hampshire and Virginia^[Errata: Virginia no longer allows drivers to opt for the uninsured motorist fee as of July 1, 2024 https://www.dmv.virginia.gov/news/new-laws-take-effect-today-july-1-2024], car insurance is mandated in every state.  The point of this policy is to protect citizens from the often large financial burden resulting from a car crash.  However, forcing individuals to purchase insurance may generate negative outcomes through unintended consequences.  The often cited reason for this is **moral hazard**.  In other words, if individuals are shielded from the negative consequences of dangerous behavior, they may be more likely to engage in such behavior.  Think of this from the opposite point of view: if you knew your vehicle would blow up if you got into a fender bender, you'd probably drive much more safely (or not at all) than you do now.
+
+In this homework, we are going to explore the question: **how does auto insurance affect traffic safety?**
+
+There are many ways to think through this problem, but let's start with the following factors that might be related to auto insurance and traffic safety:
+
+- **Auto Insurance (AI)**: whether an individual has auto insurance (*treatment*).
+- **Risky Driving Behavior (RDB)**: an individual's behavior, such as reckless driving, texting and driving, etc.
+- **Vehicle Safety Features (VSF)**: the number of advanced vehicle safety features.
+- **Traffic Enforcement (TE)**: the degree to which traffic law enforcement pays attention to the routes the individual travels.
+- **Age (A)**: the individual's age.
+- **Crash Risk (CR)**: the probability of being involved in an accident (*outcome*).
+
+Now, consider the following relationships between the variables:
+
+- We will test both the direct and total effect of auto insurance on crash risk.
+- Auto insurance, through moral hazard, effects the risky driving behavior of individuals.
+- Risky driving behavior will effect the probability of a crash.
+- Driver age will effect crash risk due to age alone (*i.e.* inexperience) and due to different levels of risky driving behavior.
+- Traffic enforcement will influence risky driving behavior.
+- Traffic enforcement will influence crash risks by itself by pulling over *other* reckless drivers.
+- Vehicle safety features (due to moral hazard) will influence risky driving behavior.
+
+
+
+## Question `r Q <- Q+1; Q`
+
+```{r include=FALSE}
+q <- 0
+```
+
+Using `dagitty`, Construct and plot a DAG to depict the relationships between these variables.  Be sure to indicate which variable is the outcome and which is the treatment. (**6 Points**)
+
+```{r, warning=FALSE, message=FALSE, fig.height=2, fig.width=4, fig.show='hold'}
+library(dagitty)
+
+rdb_dag <- dagitty("dag {
+                   AI [exposure]
+                   CR [outcome]
+                   AI -> RDB
+                   RDB -> CR
+                   A -> RDB
+                   TE -> RDB
+                   TE -> CR
+                   VSF -> RDB
+                   
+                   
+}")
+plot(rdb_dag)
+cat("Adjustment Set for DAG:\n")
+print(adjustmentSets(rdb_dag, effect = "direct"))
+print(adjustmentSets(rdb_dag, effect = "total"))
+paths(rdb_dag)
+```
+
+
+
+
+
+## Question `r Q <- Q+1; Q`
+
+```{r include=FALSE}
+q <- 0
+```
+
+Simulated data for this setting can be found [here](https://alexcardazzi.github.io/econ400/data/autoinsurance_sim.csv).
+
+
+`r q <- q+1; letters[q]`. Read the data into an object called `safety` in R. (**2 Points**)
+
+```{r}
+safety <- read.csv("https://alexcardazzi.github.io/econ400/data/autoinsurance_sim.csv")
+```
+
+
+`r q <- q+1; letters[q]`. Create summary statistics using functions from the `modelsummary` package. (**3 Points**)
+
+```{r}
+library("modelsummary") # you may need to install kableExtra!
+options(modelsummary_factory_default = 'kableExtra')
+options("modelsummary_format_numeric_latex" = "plain")
+datasummary(All(safety) ~ N + Mean + SD + Min + Max, 
+            data = safety,
+            title = "Safety Data")
+```
+
+
+
+
+
+## Question `r Q <- Q+1; Q`
+
+```{r include=FALSE}
+q <- 0
+```
+
+Use functions from `dagitty` to evaluate and explore your DAG.  This will help inform your empirical specification and identification strategy.  You may use code, words, or both to answer these questions.
+
+
+`r q <- q+1; letters[q]`. List each of the paths in the DAG and tell which are "open". (**2 Point**)
+
+```{r}
+paths(rdb_dag)
+```
+
+
+`r q <- q+1; letters[q]`. For each path, discuss why it is open or closed.  Be sure to use terms like "confounder", "collider", "mediator", etc. (**4 Points**)
+
+AI -> RDB -> CR is open as Risky Driving Behavior is a mediator between Auto Insurance and Crash Risk. 
+
+AI -> RDB <- TE -> CR is closed. Although Traffic Enforcement is a confounder between Risky Driving Behavior and Crash Risk, Risky Driving Behavior is a collider between Auto Insurance and Traffic Enforcement.
+
+
+`r q <- q+1; letters[q]`. What does it mean, and why is it significant, for a path to be open/closed? (**2 Point**)
+
+If a path is open the treatment either directly or, through a mediator or a confounder, indirectly affects the outcome. If the path is the treatement does not affect the outcome through that path because of a collider.
+
+
+`r q <- q+1; letters[q]`. Which factors do you need to control for to estimate the *total* causal effect of auto insurance on crash risk? (**2 Points**)
+
+```{r}
+print(adjustmentSets(rdb_dag, effect = "total"))
+```
+
+Nothing. The only confounder, Traffic Enforcement, lies on a closed path. So a simple regression will suffice for total effects.
+
+`r q <- q+1; letters[q]`. Which factors do you need to control for to estimate the *direct* causal effect of auto insurance on crash risk?  You may use `dagitty` to help you, **but you must provide explanations for `dagitty`'s output**. (**2 Points**)
+
+```{r}
+print(adjustmentSets(rdb_dag, effect = "direct"))
+```
+
+We need to control for both Risky Driving Behavior and Traffic Enformcement because both act as mediators between Auto Insurance and Crash Risk. As there is no direct path from AI -> CR the mediators need to be accounted for to measure how much of the treatment effect is absorbed by the mediator. Traffic enforcement still needs to be accounted for even though it is on a closed path because we are also controlling for RDB which serves as the collider on the otherwise closed path.
+
+
+
+
+
+## Question `r Q <- Q+1; Q`
+
+```{r include=FALSE}
+q <- 0
+```
+
+Using `safety`, estimate the (direct and total) causal effects of auto insurance on crash risk.
+
+
+`r q <- q+1; letters[q]`. Estimate the models below. (**2 Points**)
+
+```{r}
+reg1 <- lm(CR ~ AI, safety)
+reg2 <- lm(CR ~ AI + RDB + TE, safety)
+```
+
+
+`r q <- q+1; letters[q]`. Display the coefficient estimates in a table generated via functions in `modelsummary`. (**3 Points**)
+
+```{r}
+regz <- list(`Total Effects` = reg1,
+             `Direct Effects` = reg2)
+coefz <- c("(Intercept)" = "Constant",
+           "AI" = "Auto Insurance",
+           "RDB" = "Risky Driving Behavior",
+           "TE" = "Traffic Enforcement")
+gofz <- c("nobs", "r.squared")
+title <- "Treatment Effects of Auto Insurance on Crash Risk"
+modelsummary(regz,
+             estimate = "{estimate}{stars}",
+             coef_map = coefz,
+             gof_map = gofz,
+             title = title
+             )
+```
+
+
+`r q <- q+1; letters[q]`. Interpret each coefficient, besides the intercept/constant, in each model. (**4 Points**)
+
+The total effects model estimates that having auto insurance will cause an increase in crash risk by $6.9\%$ with $p < 0.01$ showing good evidence against $H_0$.
+
+On the other hand, the direct effects model estimates that having auto insurance will cause a $2.8\%$ *decrease* in crash risk albeit with $p < 0.10$ showing marginal evidence against $H_0$. Risky driving behavior results in a $1.8\%$ increase in crash risk with $p < 0.001$ showing very strong evidence against $H_0$ and traffic enforcement causing a $8.9\%$ decrease in crash risk, with $p < 0.01$ showing good evidence against $H_0$.
+
+
+
+## Question `r Q <- Q+1; Q`
+
+Consider this question using data in real life.  What difficulties might you have in estimating these models in reality? (**4 Points**)
+
+Risky driving behavior is difficult to measure in real life, however the insurance industry has made significant strides in this regard using telematics programs which essentially use bluetooth, GPS, and mobile internet to monitor driving behaviors in real time. As these programs are voluntary, there may be some need to control for what factors influence who enrolls in the programs, and of course telematics still does not address the moral/morale hazard, as those who do not have insurance are by default not enrolled in the program. Measuring risky driving behavior in those that do not have insurance would be far more challenging. However insurers consider not having insurance as a risky behavior in and of itself and indicative of poor judgement. My anecdotal observation, as a licensed auto claims adjuster, I hypothesize that uninsured and underinsured drivers are significantly more likely to be involved in auto accidents. Those that have high liability limits are less likely to be liable for auto accidents. I would further hypothesize that while a moral or morale hazard could have an total effect on crash risk, it is more than compensated for by the general disposition of drivers that exercise the good judgement to have adequate insurance in the first place.
+
+
+
+
+
+## Question `r Q <- Q+1; Q`
+
+```{r include=FALSE}
+q <- 0
+```
+
+Think of two additional variables and/or edges that may belong in this DAG. Make an argument for why they belong in the DAG. (**4 Points**)
+
+Character belongs in the DAG. This could be interpreted as a measure of good judgement in general. Insurance carriers typically use credit scores (CS) to assess this. I would argue this would be causal to both AI and RDB.
+
+Location (LOC) also belongs in the DAG. Highly congested areas tend to have more auto accidents simply because there are more opportunities to make a driving error because of sheer volume. Location could also be causal to auto insurance, because the risk is higher in congested areas, drivers are more likely to be unable to afford insurance compounded by higher costs of living in urban areas. Congestion also contributes to "road rage" and more impulsive behavior in drivers who wouldn't otherwise drive recklessly, so location may in and of itself be causal to RDB.
+
+When I put these two factors into the DAG it appears that location needs to be controlled for. I would use fixed effects to do so. Credit score does not need to be controlled for in this case as it is causal to the treatment, not a mediator or confounder.
+
+```{r, warning=FALSE, message=FALSE, fig.height=2, fig.width=4, fig.show='hold'}
+
+rdb_dag2 <- dagitty("dag {
+                   AI [exposure]
+                   CR [outcome]
+                   AI -> RDB
+                   RDB -> CR
+                   A -> RDB
+                   TE -> RDB
+                   TE -> CR
+                   VSF -> RDB
+                   CS -> AI
+                   CS -> RDB
+                   LOC -> CR
+                   LOC -> AI
+                   LOC -> RDB
+                   
+                   
+}")
+plot(rdb_dag2)
+cat("Adjustment Set for DAG:\n")
+print(adjustmentSets(rdb_dag2, effect = "direct"))
+paths(rdb_dag2)
+```

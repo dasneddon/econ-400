@@ -1,0 +1,121 @@
+---
+title: "Imagination Exercise"
+subtitle: "RCT and DAGs"
+author: "David Sneddon"
+institute: "Old Dominion University"
+format: 
+  html:
+    theme: lux # Check here for more themes: https://quarto.org/docs/output-formats/html-themes.html
+    code-tools: true
+    code-fold: true
+    code-summary: "Code"
+    code-copy: hover
+    link-external-newwindow: true
+    tbl-cap-location: top
+    fig-cap-location: bottom
+
+self-contained: true
+editor: source
+bibliography: bibliography.bib
+---
+
+```{r setup, include=FALSE}
+# DO NOT EDIT THIS
+
+knitr::opts_chunk$set(fig.align = 'center')
+knitr::opts_chunk$set(out.width = '90%')
+knitr::opts_chunk$set(results = 'hold')
+knitr::opts_chunk$set(fig.show = 'hold')
+knitr::opts_chunk$set(error = TRUE)
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+par(mar = c(4.1, 4.1, 1.1, 4.1))
+
+hooks = knitr::knit_hooks$get()
+hook_foldable = function(type) {
+  force(type)
+  function(x, options) {
+    res = hooks[[type]](x, options)
+    
+    if (isFALSE(options[[paste0("fold.", type)]])) return(res)
+    
+    paste0(
+      "<details open><summary>", gsub("^p", "P", gsub("^o", "O", type)), "</summary>\n\n",
+      res,
+      "\n\n</details>"
+    )
+  }
+}
+
+knitr::knit_hooks$set(
+  output = hook_foldable("output"),
+  plot = hook_foldable("plot")
+)
+```
+
+### Research Setting
+
+Attention Deficit Hyperactivity Disorder (ADHD) was added to the DSM-III in 1987. Diagnosis of this condition became commonplace in the 1990's. [@Holland2024Healthline] I am interested in the effect of early pediatric intervention on finishing a baccalaureate degree. I will define early pediatric intervention as at age 14 or younger. The according to the @CDC_ADHD_Treatment there are three classifications of treatment: Behavioral therapy, medication with stimulants, and medication with non stimulants.
+
+
+### Application Description
+
+I made assumptions for potential causes for intervention indicated in the DAG below. I identified two backdoors that I will control for in the model. First is "Means" which can be controlled for by income level. Second is whether at least one parent held a baccalaureate degree. I also included some other possible factors that could complicate earning the degree but ultimately these factors will not need to be controlled for.
+
+
+Directed Acyclic Graph (DAG):
+
+```{r}
+library(dagitty)
+adhd_dag <- dagitty("dag {
+                    Intervention [exposure]
+                    Degree [outcome]
+                    WorkEthic [unobserved]
+                    Talent [unobserved]
+                    Means -> Degree
+                    Means -> Intervention
+                    Intervention -> Degree
+                    ParentDegree -> Degree
+                    ParentDegree -> Means
+                    ParentADHD -> Trauma
+                    Trauma -> Comorbidity
+                    Comorbidity -> Intervention
+                    ParentADHD -> Intervention
+                    Poor -> Trauma
+                    ParentADHD -> Poor
+                    ParentDegree -> Intervention
+                    Talent -> HSGPA
+                    WorkEthic -> HSGPA
+                    HSGPA -> Degree
+                    Trauma -> Intervention
+                    Means -> HSGPA
+                    ParentDegree -> HSGPA
+                    }")
+plot(adhd_dag)
+cat("Adjustment Set for DAG:\n")
+print(adjustmentSets(adhd_dag, effect = "direct"))
+paths(adhd_dag)
+
+```
+
+### Data Description
+
+Ultimately, I will need to collect a sample from adults that have an ADHD diagnosis and determine the age of their intervention, their family's average income during their childhood, and whether at least one of their parent's have a college degree, and of course whether they earned a bachelor's degree. For the purposes of this test, I would consider a bachelor's degree as a positive result if earned before the age of 25. I don't want to test for non-traditional students such as adult learners. A positive result on early interventon would be some at or before the age of 14, the typical age a child enters high school.
+
+### Empirical Model
+
+Positive result on degree $D$ for subject $n$ modeled as:
+
+$$
+D_n = \beta_0 + \delta_1I_n + \delta_2P_n+ \beta_1M_n + \varepsilon_n
+$$
+
+
+### (Expected) Findings
+
+I expect that early intervention will improve the chances of obtaining of a child obtaining a bachelor's degree in the normal period of time. I believe I have reasonably controlled for the family condition that could influence the model particularly where at least one parent has a bachelor's degree and for wealthier families.
+
+### Video Abstract
+
+*Be sure to submit your video abstract online!*
+
