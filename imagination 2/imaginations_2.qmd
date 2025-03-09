@@ -16,6 +16,7 @@ format:
 
 self-contained: true
 editor: source
+bibliography: bibliography.bib
 ---
 
 ```{r setup, include=FALSE}
@@ -54,23 +55,35 @@ knitr::knit_hooks$set(
 
 ### Research Setting
 
-*Write your answer here.*
+On June 23, 2016 a watershed moment in the history of the European Union unfolds. The United Kingdom holds a referendum on continued membership in the European Union. Although the vote was close and remains a point of contention in the present day, the people of the United Kingdom vote to leave the European Union. The result is unexpected and the incumbent Prime Minister, Conservative David Cameron announces his intention to resign the next day. Two of the countries that make up the UK, Northern Ireland and Scotland were opposed to what came to be called "Brexit", with the First Minister of Scotland even calling for a referendum for Scottish independence soon after. While, as of this writing, the United Kingdom remains fully intact, and while Brexit was fully completed on December 31, 2020: the economic effects on the UK remains a subject worthy of study, the full effects of which may not even now be fully realized. [@walker2021brexit] 
+
+While there was a great deal of emotion and opinion involved in the Brexit process, I am interested in the empirical effects of this policy change on British and Northern Irish consumers. 
 
 ### Application Description
 
-*Write your answer here.*
+I would like to test the consumer price index developed countries using difference-in-differences. The concept is fairly simple, I would calculate a CPI using a common basket for all G20 countries from 2015-2025 covering the span of time leading to and after the UK left the European Union. As the G20 is comprised of countries that have never been members and countries that are current members in addition to the UK itself, DID would be the perfect method to measure the effects of Brexit on CPI.
 
 ### Data Description
 
-*Write your answer here.*
+As basket of goods for CPI can vary year to year and country to country, therefore a single basket of goods will be needed. Luckily, this is availble from the IMF and the World Bank. [@imf_worldbank_owid_2025] Then it would be a simple matter to test the changes in CPI with the data available.
 
 ### Empirical Model
 
-*Write your answer here.*
+$$
+CPI_{ct} = \alpha + \gamma EU_c + \lambda{Post_t} + \delta(EU_c \times Post_t) + \varepsilon_{ct}
+$$
+$CPI$: Consumer price index for a given country ($c$) at a given time ($t$)\
+$\alpha$: Constant - what you would expect $CPI$ to be for a country never in the EU.\
+$\gamma$: Captures the difference between EU countries' $CPI$ and non EU countries. \
+$EU$: Binary variable capturing a country's status as an EU member.\
+$\lambda$: The change in CPI in non-EU countries after Brexit is completed.\
+$Post$: Binary varable capturing whether the measure is taken before or after December 31, 2020.\
+$\delta$: The DID measurement, essentially measuring the interaction of $EU$ and $Post$.\
+$\varepsilon$: Error term.\
 
 ### (Expected) Findings
 
-*Write your answer here.*
+I expect there to be some treatment effect in the form of a higher CPI post Brexit, however I don't expect the evidence to be overwhelming. First and foremost, the United Kingdom never part of the Eurozone. Second, while the benefits of free trade are fairly clear, a national border is a significant trade barrier in its own right. [@sneddon_local_bias] I suspect that one of the most significant factors in the effect of a national border is the lack of common currency. 
 
 ### Video Abstract
 

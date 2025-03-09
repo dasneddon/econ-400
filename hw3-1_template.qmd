@@ -1,0 +1,278 @@
+---
+title: "Homework 3-1"
+author: "Your Name Here"
+institute: "Old Dominion University"
+format: 
+  html:
+    theme: lux # Check here for more themes: https://quarto.org/docs/output-formats/html-themes.html
+    code-tools: true
+    code-fold: true
+    code-summary: "Code"
+    code-copy: hover
+    link-external-newwindow: true
+    tbl-cap-location: top
+    fig-cap-location: bottom
+
+self-contained: true
+editor: source
+---
+
+```{r setup, include=FALSE}
+# DO NOT EDIT THIS
+
+knitr::opts_chunk$set(fig.align = 'center')
+knitr::opts_chunk$set(out.width = '90%')
+knitr::opts_chunk$set(results = 'hold')
+knitr::opts_chunk$set(fig.show = 'hold')
+knitr::opts_chunk$set(error = TRUE)
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+par(mar = c(4.1, 4.1, 1.1, 4.1))
+
+hooks = knitr::knit_hooks$get()
+hook_foldable = function(type) {
+  force(type)
+  function(x, options) {
+    res = hooks[[type]](x, options)
+    
+    if (isFALSE(options[[paste0("fold.", type)]])) return(res)
+    
+    paste0(
+      "<details open><summary>", gsub("^p", "P", gsub("^o", "O", type)), "</summary>\n\n",
+      res,
+      "\n\n</details>"
+    )
+  }
+}
+
+knitr::knit_hooks$set(
+  output = hook_foldable("output"),
+  plot = hook_foldable("plot")
+)
+
+Q <- 0
+```
+
+This homework focuses on a recent paper exploiting a long ago change ([Copyrights and Creativity: Evidence from
+Italian Opera in the Napoleonic Age](https://doi.org/10.1086/710534) by Giorcelli and Moser, *Journal of Political Economy*, 2020).  During the Napoleonic Wars in Italy, copyright laws applying to musical compositions changed in parts of Italy conquered by Napoleon.  Copyright laws allow popular artists like song writers to monetize their work.  Without them, other artists can perform their songs without compensating them. You should read through the paper before completing this Homework.^[The PDF will be made available on Canvas.]
+
+**Important Note**: The data analyzed can be downloaded from the journal web site and come directly from this paper.  However, the results you generate may not exactly match those reported in the paper.
+
+
+
+### Question `r Q <- Q+1; Q`
+
+Summarize the main research question in the paper, the application analyzed, and why DiD is appropriate for this research question. (**4 Points**)
+
+This paper seeks to find a causal relationship between copyright protection and the composition of new intellectual works. The author seeks to demonstrate this by examining the adoption of copyright law in Italian states during the Napoleonic era. As the adoption of copyright law was not uniform in time and breadth, DiD is appropriate for testing. The author controls for time and state fixed effects in an attempt to isolate the effect of copyright law adoption in Italy.
+
+
+
+
+### Question `r Q <- Q+1; Q`
+
+```{r include=FALSE}
+q <- 0
+```
+
+Use the supplied data from [Giorcelli and Moser (2020)](https://doi.org/10.1086/710534) to answer the following.
+
+
+`r q <- q+1; letters[q]`. Read in [`operas_1781_1820.csv`](https://alexcardazzi.github.io/econ400/data/operas_1781-1820.csv) and name it `italy`. (**1 Point**)
+
+```{r}
+italy <- read.csv("https://alexcardazzi.github.io/econ400/data/operas_1781-1820.csv")
+```
+
+
+`r q <- q+1; letters[q]`. Using the `unique()` function, print the `state` identifiers that are in the treatment group. (**1 Point**)
+
+```{r}
+unique(italy$state)
+```
+
+
+`r q <- q+1; letters[q]`. Using `table()`, find the number of observations in each of the following groups: treatment group pre-treatment, treatment group post-treatment, control group pre-treatment, control group post-treatment. (**1 Point**)
+
+```{r}
+italy$state_ <- factor(
+  ifelse(italy$state %in% c("venetia","lombardy"), "treatment", "control"), levels = c("control", "treatment")
+)
+
+italy$post1801_ <- factor(
+  ifelse(italy$post1801 == 1, "yes", "no"), levels = c("no", "yes")
+)
+
+table(italy$state_,italy$post1801_)
+```
+
+
+`r q <- q+1; letters[q]`. Using `aggregate()`, find the average number of new operas for each of the states. (**1 Point**)
+
+```{r}
+aggregate(operas ~ state, data = italy, FUN = mean)
+```
+
+
+
+
+
+### Question `r Q <- Q+1; Q`
+
+Describe the important components of DiD.
+
+```{r include=FALSE}
+q <- 0
+```
+
+
+`r q <- q+1; letters[q]`. Discuss the general assumptions underlying the causal inference method used in the empirical analysis. (**4 Points**)
+
+Parallel Trends - The author assumes that without copyright protections being added in Lombardy and Venetia the number of opera's being produced would have continued along a parallel trajectory with other states. 
+
+Anticipation - The author assumes that the imposition of copyright laws in Lombardy and Venetia was not anticipated in a statistically significant way.
+
+STUVA - The author assumes that the Lombardy and Venetia implementing copyright protection will not affect the what would have otherwise happened in other states.
+
+Exogeneity - The author assumes that the treatment is exogenous and that the imposition of copyright law is not causal to a divergent trajectory or other exogenous factor.
+
+
+`r q <- q+1; letters[q]`. How do the authors address these assumptions in the paper (if at all)? Discuss the potential threats to a causal interpretation of the results in the paper. (**4 Points**)
+
+Parallel Trends - The author specifically tests parallel trends by comparing the time series pre and post treatment, they conclude that pre-treatment, the difference in output is not statistically significant, and statistically significant post-treatment. 
+
+Anticipation - The author tests this in a somewhat roundabout way, by testing states that eventually come under French rule and the possibility of imposing copyright law. This is also addressed by noting that the Napoleonic code introduced after 1804 remains silent on the topic of copyright law.
+
+STUVA - This is addressed by estimating the effect of copyrights at the composer level. By measuring the treatment effect on the state, migration of composers from one city to another remains unaccounted for and there may be some gravity model implications for movement between states. Estimating at the composer level accounts for this by isolating the effect of the composer residing within a copyright state. They also find no statistically significant change due to intra-Italy movement (Section V.b)
+
+Exogeneity - The author accounts return migration to Lombardy and Venetia from France and Austria by adding an interaction term to their regression to include return migrants.
+
+
+
+
+### Question `r Q <- Q+1; Q`
+
+Do your best to replicate the content in Figure 2 using `italy`. *Note*: the lines in this graph might not replicate perfectly, but do what you can. (**4 Points**)
+
+```{r, fig.show='hold'}
+italy$groupz <- as.factor(
+  ifelse(italy$state_ == "treatment", "Lombardy and Venetia", "Other States")
+)
+library(ggplot2)
+agg_table <- aggregate(operas ~ year + groupz, data = italy, FUN = mean)
+ggplot(agg_table, aes(x = year, y = operas, group = groupz, linetype = groupz)) +
+  geom_line() +
+  scale_linetype_manual(values = c("Lombardy and Venetia" = "solid", "Other States" = "dashed")) +
+  geom_vline(xintercept = 1801, linetype = "dotted") +
+  annotate("text", x = 1801, y = 7.5, label = "1801 Copyright Law", hjust = -0.1) +
+  theme(legend.position = "bottom",
+        legend.title = element_blank(),
+        legend.box.background = element_rect()
+        ) +
+  scale_y_continuous(limits = c(0, NA)) +
+  labs(x = NULL, y = "Mean New Operas Per Year")
+```
+
+
+
+
+
+### Question `r Q <- Q+1; Q`
+
+Replicate the main result reported in the paper in the following:
+
+```{r include=FALSE}
+q <- 0
+```
+
+
+`r q <- q+1; letters[q]`. Estimate a 2x2 DiD model of the form (**2 point**):
+
+$$Y_{st} = \beta_0 + \beta_1 \text{Treat}_s + \beta_2 \text{Post}_t + \delta (\text{Treat}_s \times \text{Post}_t) + \epsilon_{st}$$
+
+```{r}
+reg0 <- lm(operas ~ copyright + post1801 + copyright:post1801, data = italy)
+summary(reg0)
+```
+
+
+`r q <- q+1; letters[q]`. Replicate the results in Columns (1) and (2) on Table 3 in the paper.  Do not worry about replicating the standard errors.^[You only need to replicate the first two columns.] (**2 point**)
+
+```{r}
+library(fixest)
+library(modelsummary)
+reg1 <- feols(operas ~ copyright*post1801 | state + year, data = italy, se = "hetero")
+reg2 <- feols(operas ~ copyright*post1801 | year, data = italy, se = "hetero")
+regz <- list(reg1, reg2)
+my_gof_map <- data.frame(
+  raw   = c("nobs", "r.squared", "FE: state", "FE: year", "vcov.type"),
+  clean = c("Observations (state-year pairs)", "R-squared", "State Fixed Effects", "Year Fixed Effects", "SE"),
+  fmt   = c(0, 3, NA, NA, NA)
+)
+modelsummary(regz, gof_map = my_gof_map)
+```
+
+
+`r q <- q+1; letters[q]`. Create a table using `modelsummary` containing coefficients from the three models. (**2 point**)
+
+```{r, results='hold'}
+regz <- list(reg0, reg1, reg2)
+coefz <- c("(Intercept)" = "Constant",
+           "copyright:post1801" = "L&V x Post 1801",
+           "copyright" = "L&V",
+           "post1801" = "Post 1801"
+           )
+modelsummary(regz, gof_map = my_gof_map, coef_map = coefz, estimate = "{estimate}{stars}")
+```
+
+
+
+
+
+### Question `r Q <- Q+1; Q`
+
+```{r include=FALSE}
+q <- 0
+```
+
+Discuss your results:
+
+`r q <- q+1; letters[q]`. What is the interpretation of the causal parameter of interest? Place the causal effect in the context of the setting. (**2 Points**)
+
+A copyright law in force in a state in Italy during the Napoleonic era causes an average increase of $2.242$ in the number of operas composed.
+
+
+`r q <- q+1; letters[q]`. How large is the treatment effect as a percentage of the pre-treatment average of the treatment group? (**4 Points**)
+
+```{r}
+pct_txeffect <- as.numeric(100*reg0$coefficients["copyright:post1801"])/(as.numeric(reg0$coefficients["(Intercept)"])+as.numeric(reg0$coefficients["copyright"]))
+paste0(round(pct_txeffect,1),"%")
+```
+
+
+
+
+
+### Question `r Q <- Q+1; Q`
+
+Replicate the Event Study in Figure 3 of the paper. (**4 points**)
+
+```{r, warning=FALSE}
+reg3 <- feols(operas ~ i(year, copyright, ref = 1801) | state + year, data = italy[italy$year>1790,], se = "hetero")
+modelsummary(reg3,
+             estimate = "{estimate}{stars}",
+             gof_map = my_gof_map)
+iplot(reg3)
+```
+
+
+
+
+
+### Question `r Q <- Q+1; Q`
+
+Do you believe the result to be credible in terms of causality and magnitude? Why or why not? (**4 Points**)
+
+The authors state that most of the years remain statistically significant at $\alpha=0.01$ however the result above does not align with the results in the paper. Even with heteroscedacticity robust standard errors, most years remain statistically insignificant. I suspect that the dataset provided is somewhat different than the dataset the paper uses although it is made to look very similar, the number of operas appears to be about $4$ less than the data presented in the paper. So because the results above indicate a failure to reject the null hypothesis for most years particularly post treatment, I have to question whether the result is credible, even though the null is strongly rejected in Equations (1) (2) and (3).
+
+
