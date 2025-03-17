@@ -1,6 +1,6 @@
 ---
 title: "Homework 4"
-author: "Your Name Here"
+author: "David Sneddon"
 institute: "Old Dominion University"
 format: 
   html:
@@ -77,7 +77,7 @@ Explore whether catholic school education improves outcomes.  The data for this 
 `r q <- q+1; letters[q]`. Read in the data and store it as an object called `school`. (**1 Point**)
 
 ```{r}
-# Your code here...
+school <- read.csv("https://alexcardazzi.github.io/econ400/data/catholic2.csv")
 ```
 
 
@@ -92,35 +92,42 @@ Explore whether catholic school education improves outcomes.  The data for this 
 - `income2` : `income2` (no change, this is just for completeness)
 
 ```{r}
-# Your code here...
+colnames(school) <- c("math_score", "math_std", "mom_age", "mom_noCollege", "income", "catholic", "income2")
 ```
 
 
 `r q <- q+1; letters[q]`. Calculate the percent of students who attended catholic school. (**1 Point**)
 
 ```{r}
-# Your code here...
+paste0(round(mean(school$catholic)*100,2),"%")
 ```
 
 
 `r q <- q+1; letters[q]`. Use `modelsummary` to create a summary statistics table for students who did not attend catholic school. (**1 Point**)
 
 ```{r}
-# Your code here...
+library("modelsummary") 
+options(modelsummary_factory_default = 'kableExtra')
+options("modelsummary_format_numeric_latex" = "plain")
+secular <- school[school$catholic==0,]
+datasummary(All(secular) ~ length + mean + sd + min + max,
+            data = secular, fmt = fmt_decimal(2))
 ```
 
 
 `r q <- q+1; letters[q]`. Use `modelsummary` to create a summary statistics table for students who attended catholic school. (**1 Point**)
 
 ```{r}
-# Your code here...
+parochial <- school[school$catholic==1,]
+
+datasummary(All(parochial) ~ length + mean + sd + min + max,
+            data = parochial, fmt = fmt_decimal(2))
 ```
 
 
 `r q <- q+1; letters[q]`. Discuss the similarities and differences between the students in these groups. (**2 Points**)
 
-*Your answer here...*
-
+Math scores for catholic school students are on average, slightly higher than non catholic school students. However there is also a wider range for non catholic school students. Income for catholic school families is also significantly higher than their counterparts. Average age of the mothers for catholic school students also tends to be slightly higher, while families where the mother did not attend college is significantly lower.
 
 
 
@@ -137,16 +144,74 @@ Examine the family income for these groups of students.
 `r q <- q+1; letters[q]`. Use `density()` to estimate the distributions of the log of `income2` for students who attend catholic school and students who do not.  Then, plot these two densities on the same set of labeled axes.  Remember to ensure both distributions are fully visible (not cutoff), different colors, and identified in a legend.^[[Hint](https://alexcardazzi.github.io/econ400/module04/module04-01_notes.html#:~:text=Let%E2%80%99s%20plot%20both%20distributions.)] (**3 Points**)
 
 ```{r}
-# Your code here...
+# library(MatchIt)
+# reg_i2 <- glm(catholic ~ log(income2), 
+#               data = school,
+#               family = binomial(link = "logit"))
+
+# school$ps <- predict(reg_i2, type = "response")
+
+# school_m <- matchit(catholic ~ income2,
+#                     data = school,
+#                     method = "nearest",
+#                     distance = "glm")
+
+secular_D <- density(log(school$income2[school$catholic==0]))
+parochial_D <- density(log(school$income2[school$catholic==1]))
+
+plot(0, 0, type = "n",
+     xlab = "Density",
+     ylab = "log(income2)",
+     ylim = range(parochial_D$y, secular_D$y),
+     xlim = range(parochial_D$x, secular_D$x))
+lines(parochial_D$x, parochial_D$y, col = "tomato", lwd = 2)
+lines(secular_D$x, secular_D$y, col = "dodgerblue", lwd = 2)
+abline(v = mean(log(school$income2[school$catholic == 1])), col = "tomato", lwd = 2)
+abline(v = mean(log(school$income2[school$catholic == 0])), col = "dodgerblue", lwd = 2)
+legend("topleft", 
+       legend = c("Catholic (Treatment)", "Secular (Control)"),
+       col = c("tomato", 
+               "dodgerblue"),
+       bty = "n",
+       lty = 1)
+
 ```
 
 
 `r q <- q+1; letters[q]`. Do you think mother's age is an important variable to control for? Why, or why not? Use "DAG" language in your answer. (**1 Point**)
 
+```{r}
+library(dagitty)
+
+mathcathdag <- dagitty("dag {
+                       MathScore [outcome]
+                       CathSch [exposure]
+                       Income -> MathScore
+                       CathSch -> MathScore
+                       Income -> CathSch
+                       MotherAge -> Income
+                       CathRel -> CathSch
+                       MotherColl -> MotherAge
+                       MotherColl -> Income
+                       CathRel -> MotherAge
+                       Income -> MotherAge
+                       CathRel -> TwoParent
+                       TwoParent -> Income
+                       TwoParent -> MathScore
+                       }")
+plot(mathcathdag)
+cat("Adjustment Set for DAG:\n")
+print(adjustmentSets(mathcathdag, effect = "total"))
+paths(mathcathdag)
+
+```
+
+Considering the DAG above, it appears that mother's age does not need to be controlled for as no open backdoors arise from this variable. In this DAG, I left mother's age and income as causal to each other and even if income is causal to mother's age, mother's age is a collider, and if the opposite is true then income is a mediator between it and the treatment.
+
 
 `r q <- q+1; letters[q]`. Regardless of your answer to the previous question, what are some other factors (that may or may not exist in the dataset) that might be important to control for?  Again, use "DAG" language in your answer. (**2 Points**)
 
-
+Income, however, was identified as a backdoor path that needs to be controlled for. Potentially being of the Catholic religion or being part of a two parent household need to be controlled for as they are both potential backdoors.
 
 
 
@@ -162,30 +227,94 @@ Begin working through the matching procedure.
 `r q <- q+1; letters[q]`. Estimate a propensity score model using mother's age, mother's education, and family income as predictors.^[Remember: propensity score models are often estimated using logistic regression.] (**2 Points**)
 
 ```{r}
-# Your code here...
+library(MatchIt)
+reg_i2 <- glm(catholic ~ mom_age + mom_noCollege + income2,
+              data = school,
+              family = binomial(link = "logit"))
+
+school$ps <- predict(reg_i2, type = "response")
+
+school_m <- matchit(catholic ~ mom_age + mom_noCollege + income2,
+                    data = school,
+                    method = "nearest",
+                    distance = "glm")
+secular_D2 <- density(school$ps[school$catholic==0])
+parochial_D2 <- density(school$ps[school$catholic==1])
+plot(0, 0, type = "n",
+     xlab = "Propensity Score",
+     ylab = "Density",
+     ylim = range(parochial_D2$y, secular_D2$y),
+     xlim = range(parochial_D2$x, secular_D2$x))
+lines(parochial_D2$x, parochial_D2$y, col = "tomato", lwd = 2)
+lines(secular_D2$x, secular_D2$y, col = "dodgerblue", lwd = 2)
+abline(v = mean(school$ps[school$catholic == 1]), col = "tomato", lwd = 2)
+abline(v = mean(school$ps[school$catholic == 0]), col = "dodgerblue", lwd = 2)
+legend("topright", 
+       legend = c("Catholic (Treatment)", "Secular (Control)"),
+       col = c("tomato", 
+               "dodgerblue"),
+       bty = "n",
+       lty = 1)
+options(scipen=999)
+summary(reg_i2)
+
 ```
 
 
 `r q <- q+1; letters[q]`. Interpret the signs of the model's estimated coefficients. (**2 Points**)
 
-*Your answer here...*
+Intercept: Constant, not meaningful.
+mom_age: Each additional year in mother's age correlates to a $3.49\%$ increase in likelihood of a child attending catholic school.
+mom_noCollege: If a mother did not attend college a child is $70.9\%$ less likely to attend catholic school.
+income2: Each additional $\$1000$ in income makes a child $0.2\%$ more likely to attend catholic school.
 
 
 `r q <- q+1; letters[q]`. Using this model, , create inverse probability weights as a new variable called `w` in `school`. (**2 Point**)
 
 ```{r}
-# Your code here...
+school$w <- (school$catholic / school$ps) + ((1 - school$catholic) / (1 - school$ps))
 ```
 
 
 `r q <- q+1; letters[q]`. Using these weights, re-create the income distributions from before.  Comment on any similarities/differences.^[Hint: `density()` contains an option for weights.] (**2 Points**)
 
 ```{r, warning=FALSE}
-# Your code here...
+reg_i2_w <- glm(catholic ~ mom_age + mom_noCollege + income2,
+              data = school,
+              family = binomial(link = "logit"),
+              weights = school$w)
+
+school$ps <- predict(reg_i2_w, type = "response")
+
+school_m_w <- matchit(catholic ~ mom_age + mom_noCollege + income2,
+                    data = school,
+                    method = "nearest",
+                    distance = "glm")
+secular_D2 <- density(school$ps[school$catholic==0], weights = school$w[school$catholic==0])
+parochial_D2 <- density(school$ps[school$catholic==1], weights = school$w[school$catholic==1])
+plot(0, 0, type = "n",
+     xlab = "Propensity Score",
+     ylab = "Density",
+     ylim = range(parochial_D2$y, secular_D2$y),
+     xlim = range(parochial_D2$x, secular_D2$x))
+lines(parochial_D2$x, parochial_D2$y, col = "tomato", lwd = 2)
+lines(secular_D2$x, secular_D2$y, col = "dodgerblue", lwd = 2)
+# abline(v = mean(school$ps[school$catholic == 1]), col = "tomato", lwd = 2)
+# abline(v = mean(school$ps[school$catholic == 0]), col = "dodgerblue", lwd = 2)
+legend("topright", 
+       legend = c("Catholic (Treatment)", "Secular (Control)"),
+       col = c("tomato", 
+               "dodgerblue"),
+       bty = "n",
+       lty = 1,
+       cex = 0.75)
+options(scipen=999)
+summary(reg_i2_w)
 ```
 
-*Your answer here...*
-
+mom_age: The new model predicts that a $1$ year increase in mother's age will increase the likelihood that a child will attend catholic school by $1.48\%$.
+mom_noCollege: If a mother didn't attend college the likelihood of a child attending catholic school decreases by $3.04\%$ which is a significant change from the unweighted model and it is no longer considered statistically significant.
+income2: The model now predicts that each $\$1000$ increase in income will increase the likelihood of a child attending catholic school by $0.08\%$.
 
 
 
@@ -206,28 +335,40 @@ $$\begin{aligned}\text{Math}_i = \alpha &+ \delta \text{Catholic}_i \\ &+ \beta_
 `r q <- q+1; letters[q]`. First estimate the models' parameters using OLS and store them as `r_ols1` and `r_ols2`. You do not need to display the results quite yet. (**2 Points**)
 
 ```{r}
-# Your code here...
+r_ols1 <- lm(math_score ~ catholic, data = school)
+r_ols2 <- lm(math_score ~ catholic + mom_age + mom_noCollege + log(income2), data = school)
 ```
 
 
 `r q <- q+1; letters[q]`. Use the `MatchIt` package in R to create a matched sample (match based on mahalanobis distance). Then, estimate the parameters with OLS using the matched sample. Store these as `r_match1` and `r_match2`. Again, hold off on displaying these coefficients. (**3 Points**)
 
 ```{r, warning=FALSE, message=FALSE, results='hold'}
-# Your code here...
+school_m2 <- school
+m.out <- matchit(catholic ~ mom_age + mom_noCollege + income2, data = school_m2, method = "nearest", distance = "mahalanobis")
+school_m2 <- match.data(m.out, drop.unmatched = TRUE)
+r_match1 <- lm(math_score ~ catholic, data = school_m2)
+r_match2 <- lm(math_score ~ catholic + mom_age + mom_noCollege + log(income2), data = school_m2)
 ```
 
 
 `r q <- q+1; letters[q]`. Estimate the parameters with OLS using the inverse probability weights you generated before. Store these estimations as `r_ipw1` and `r_ipw2`. (**3 Points**)
 
 ```{r}
-# Your code here...
+r_ipw1 <- lm(math_score ~ catholic, data = school_m2, weights = w)
+r_ipw2 <- lm(math_score ~ catholic + mom_age + mom_noCollege + log(income2), data = school_m2, weights = w)
 ```
 
 
 `r q <- q+1; letters[q]`. Display the coefficients of the above six models in a table generated by `modelsummary`. (**2 Points**)
 
 ```{r}
-# Your code here...
+regz <- list("OLS" = r_ols1, 
+             "PSM" = r_match1, 
+             "IPW" = r_ipw1, 
+             "OLS Controls" = r_ols2, 
+             "PSM Controls" = r_match2, 
+             "IPW Controls" =r_ipw2)
+modelsummary(regz, stars = TRUE)
 ```
 
 
@@ -242,9 +383,7 @@ q <- 0
 
 Discuss the results of the estimations.  Make sure to discuss difference between methods (OLS, PSM, and IPW) as well as models (controls, no controls). (**4 Points**)
 
-*Your answer here...*
-
-
+In naïve OLS, the model predicts that math scores will increase by $1.262$ units if the student is enrolled in catholic school, however with matching and weighting the model predicts a drop in math scores by $1.326$ and $2.578$ respectively. When controlled for mother's age, mother's education, and family income, catholic school as a detrimental effect for all three models (OLS, PSM, and IPW). Family income appears to be the most significant contributing factors to math scores. I would suggest that mother's education add some collinearity to the model, as I would consider that causal to income.
 
 
 
@@ -252,7 +391,7 @@ Discuss the results of the estimations.  Make sure to discuss difference between
 
 Write up your takeaways from this analysis.  Do you believe catholic school is better than public school in terms of math education? Which model do you believe the most? Is matching appropriate in this setting?  In other words, are the assumptions required to interpret these results as causal satisfied or have they been violated? (**4 Points**)
 
-*Your answer here...*
+It would appear that catholic school is not better than public school in terms of math education. I think there is some collinearity by adding mother's education to the model, however. Mother's education is likely causal to family income, so I would remove that from the model. Otherwise, I believe the matched and weighted models are appropriate for estimation as this addresses the fact that there is a great deal more dispersion in math scores among public school students vs. catholic school students. Matching and weighting get us closer to "ceteris paribus" and removing the noise that comes from the dispersion among students in public schools.
 
 
 
